@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1CQ4D3VQ3L"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-1CQ4D3VQ3L');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vecterra Command</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Pilot a light jet in Vecterra Command. Survive the infinite neon grid, dodge obstacles, battle enemies, and achieve high scores in this retro arcade flight simulator.">
+    <meta name="keywords" content="Vecterra Command, Chris Pirillo, arcade flight simulator, retro neon game, browser flight game, webgl jet game, survival game, light jet">
+    <meta name="author" content="Chris Pirillo">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://pirillo.com/arcade/vecterra-command.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pirillo.com/arcade/vecterra-command.html">
+    <meta property="og:title" content="Vecterra Command">
+    <meta property="og:description" content="Survive the infinite neon grid in Vecterra Command. A high-speed retro arcade flight simulator by Chris Pirillo.">
+    <meta property="og:image" content="https://pirillo.com/arcade/images/vecterra-command.png">
+    <meta property="og:site_name" content="Pirillo Arcade">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@ChrisPirillo">
+    <meta name="twitter:creator" content="@ChrisPirillo">
+    <meta name="twitter:title" content="Vecterra Command">
+    <meta name="twitter:description" content="Survive the infinite neon grid in Vecterra Command. A high-speed retro arcade flight simulator.">
+    <meta name="twitter:image" content="https://pirillo.com/arcade/images/vecterra-command.png">
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoGame",
+      "name": "Vecterra Command",
+      "description": "A high-speed retro arcade flight simulator where players pilot a light jet through an infinite neon grid.",
+      "genre": ["Arcade", "Flight Simulator", "Action"],
+      "url": "https://pirillo.com/arcade/vecterra-command.html",
+      "image": "https://pirillo.com/arcade/images/vecterra-command.png",
+      "author": {
+        "@type": "Person",
+        "name": "Chris Pirillo",
+        "url": "https://pirillo.com",
+        "sameAs": "https://twitter.com/ChrisPirillo"
+      },
+      "operatingSystem": "Web Browser",
+      "applicationCategory": "Game",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock"
+      }
+    }
+    </script>
+
+    <!-- Resource Hints for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    
+    <!-- Preload Critical Assets -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" as="style">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" as="script">
+
+    <!-- Stylesheets -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Critical CSS Inlined */
+        :root {
+            --color-neon-cyan: #00ffff;
+            --color-neon-magenta: #ff00ff;
+            --color-danger: #ff0000;
+            --bg-color: #000;
+            --glass-bg: rgba(0, 15, 20, 0.95);
+        }
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: var(--bg-color); 
+            font-family: 'Press Start 2P', cursive, monospace; /* Fallback added */
+            user-select: none; 
+            -webkit-user-select: none;
+            color: #fff;
+            touch-action: none; /* Prevent scroll/zoom on mobile */
+        }
+        main { display: block; }
+        
+        #canvas-container { 
+            width: 100vw; 
+            height: 100vh; 
+            display: block; 
+            position: relative; 
+            z-index: 1;
+        }
+        
+        /* UI Overlay */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+        
+        /* Crosshair Reticle */
+        #reticle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 24px;
+            height: 24px;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            pointer-events: none;
+            transition: all 0.2s;
+            will-change: transform, width, height; /* Performance hint */
+        }
+        #reticle::before, #reticle::after {
+            content: '';
+            position: absolute;
+            background-color: rgba(0, 255, 255, 0.9);
+            box-shadow: 0 0 8px var(--color-neon-cyan);
+        }
+        /* Vertical line */
+        #reticle::before {
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+        /* Horizontal line */
+        #reticle::after {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+        /* Center dot */
+        #reticle-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            transform: translate(-50%, -50%);
+            z-index: 6;
+            box-shadow: 0 0 4px #fff;
+        }
+
+        /* Powerup State for Reticle */
+        .powered-up #reticle::before, .powered-up #reticle::after {
+            background-color: var(--color-neon-magenta);
+            box-shadow: 0 0 15px var(--color-neon-magenta);
+        }
+        .powered-up #reticle {
+            width: 60px;
+            height: 60px;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        /* Dashboard */
+        .dashboard {
+            position: absolute;
+            bottom: 20px;
+            width: 90%;
+            display: flex;
+            justify-content: space-between;
+            color: var(--color-neon-cyan);
+            font-size: 14px; 
+            text-shadow: 2px 2px 0px #004444; 
+            line-height: 1.5;
+        }
+        .bar-container {
+            width: 200px;
+            height: 16px;
+            border: 2px solid #333;
+            background: rgba(0,0,0,0.5);
+            margin-top: 5px;
+            padding: 2px;
+        }
+        /* Responsive dashboard for mobile */
+        @media (max-width: 600px) {
+            .dashboard {
+                bottom: 40px; 
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                font-size: 10px;
+            }
+            .bar-container { width: 120px; height: 10px; }
+        }
+
+        .bar-fill { height: 100%; background: var(--color-neon-cyan); width: 100%; box-shadow: 0 0 5px var(--color-neon-cyan); }
+        .danger { color: var(--color-danger); text-shadow: 2px 2px 0px #440000; }
+        .danger .bar-fill { background: var(--color-danger); box-shadow: 0 0 10px var(--color-danger); }
+
+        /* Powerup Message */
+        #powerup-msg {
+            position: absolute;
+            top: 20%;
+            width: 100%;
+            text-align: center;
+            color: var(--color-neon-magenta);
+            font-size: 20px;
+            text-shadow: 0 0 10px var(--color-neon-magenta);
+            display: none;
+            will-change: opacity;
+        }
+        .active-powerup { display: block !important; animation: pulse 0.5s infinite alternate; }
+
+        @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+        
+        /* Threat Level Message */
+        #threat-msg {
+            position: absolute;
+            top: 15%;
+            width: 100%;
+            text-align: center;
+            color: #ffaa00;
+            font-size: 14px;
+            display: none;
+        }
+
+        /* --- Redesigned HUD / Menu System --- */
+        #menu-container {
+            position: absolute;
+            z-index: 30;
+            pointer-events: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        #menu {
+            position: relative;
+            width: 90%;
+            max-width: 550px;
+            background: linear-gradient(135deg, rgba(0, 10, 20, 0.95) 0%, rgba(0, 5, 10, 0.98) 100%);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            /* Sci-fi clipped corners */
+            clip-path: polygon(
+                20px 0, 100% 0, 
+                100% calc(100% - 20px), calc(100% - 20px) 100%, 
+                0 100%, 0 20px
+            );
+            padding: 2px; /* For pseudo-border effect via background */
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.1);
+        }
+
+        /* Inner content wrapper to create the border effect with clip-path */
+        .menu-inner {
+            background: rgba(5, 10, 15, 0.95);
+            padding: 40px;
+            clip-path: polygon(
+                20px 0, 100% 0, 
+                100% calc(100% - 20px), calc(100% - 20px) 100%, 
+                0 100%, 0 20px
+            );
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Decorative corner accents */
+        #menu::before, #menu::after {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--color-neon-cyan);
+            pointer-events: none;
+            z-index: 31;
+        }
+        #menu::before {
+            top: 0; left: 0;
+            border-bottom: none; border-right: none;
+        }
+        #menu::after {
+            bottom: 0; right: 0;
+            border-top: none; border-left: none;
+        }
+
+        h1.game-title { 
+            color: #fff; 
+            font-size: 32px; 
+            margin: 0 0 10px 0; 
+            text-align: center;
+            text-shadow: 
+                0 0 5px var(--color-neon-cyan),
+                0 0 10px var(--color-neon-cyan),
+                0 0 20px var(--color-neon-cyan);
+            letter-spacing: 2px;
+            line-height: 1.2;
+        }
+        
+        .subtitle {
+            color: var(--color-neon-cyan);
+            font-size: 12px;
+            text-align: center;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            opacity: 0.8;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .menu-section {
+            margin-bottom: 15px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            color: #aaa;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .mission-box {
+            background: rgba(0, 255, 255, 0.05);
+            border-left: 3px solid var(--color-neon-cyan);
+            padding: 10px 15px;
+            font-size: 12px;
+            color: #fff;
+            line-height: 1.5;
+        }
+
+        .warning-box {
+            background: rgba(255, 0, 0, 0.1);
+            border-left: 3px solid var(--color-danger);
+            padding: 10px 15px;
+            font-size: 11px;
+            color: #ffaa00;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .warning-icon { font-size: 16px; }
+
+        /* Controls Grid */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Changed to 3 columns for single line layout */
+            gap: 8px;
+            margin-top: 5px;
+        }
+        
+        .control-row {
+            display: flex;
+            flex-direction: column; /* Stack label and key vertically to save width */
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 5px;
+            font-size: 9px;
+            text-align: center;
+        }
+        
+        .control-key {
+            color: var(--color-neon-cyan);
+            font-weight: bold;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .start-button {
+            background: transparent;
+            color: var(--color-neon-cyan);
+            border: 2px solid var(--color-neon-cyan);
+            padding: 15px;
+            font-size: 16px;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .start-button:hover {
+            background: var(--color-neon-cyan);
+            color: #000;
+            box-shadow: 0 0 20px var(--color-neon-cyan);
+        }
+
+        .start-button::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+        .start-button:hover::before {
+            left: 100%;
+        }
+
+        .hidden { display: none !important; }
+
+        /* Pause Menu Styling (inherits most from menu) */
+        #pause-menu {
+            position: absolute;
+            background: rgba(0, 15, 20, 0.95);
+            padding: 40px;
+            border: 4px solid var(--color-neon-cyan);
+            text-align: center;
+            pointer-events: auto;
+            z-index: 30;
+            image-rendering: pixelated;
+        }
+        #pause-menu h1 { color: #fff; font-size: 24px; margin-bottom: 20px; }
+        #pause-menu button {
+            background: #000; color: var(--color-neon-cyan);
+            border: 2px solid var(--color-neon-cyan); padding: 15px 30px;
+            font-family: inherit; font-size: 14px; cursor: pointer;
+        }
+        #pause-menu button:hover { background: var(--color-neon-cyan); color: #000; }
+
+        /* Control Instructions Visibility Logic */
+        .mobile-instructions { display: none; }
+        
+        @media (pointer: coarse) {
+            .desktop-instructions { display: none; }
+            .mobile-instructions { display: grid; } /* Grid for the new layout */
+        }
+
+        /* Scanlines */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.3) 3px);
+            pointer-events: none; z-index: 10;
+        }
+
+        /* Game Over Screen */
+        #game-over {
+            position: absolute; 
+            z-index: 40; 
+            text-align: center; 
+            background: rgba(0,0,0,0.9); 
+            padding: 50px; 
+            border: 4px solid var(--color-danger); 
+            box-shadow: 0 0 50px var(--color-danger);
+            pointer-events: auto; 
+        }
+    </style>
+</head>
+<body id="game-body">
+
+<main id="canvas-container" role="main" aria-label="Game Screen"></main>
+<div class="scanlines"></div>
+<div id="reticle"><div id="reticle-dot"></div></div>
+<div id="threat-msg" role="alert">THREAT LEVEL INCREASED</div>
+<div id="powerup-msg" role="status">OMNI-SYSTEM ACTIVE</div>
+
+<div id="hud">
+    <!-- Main Menu -->
+    <section id="menu-container" aria-label="Main Menu">
+        <div id="menu">
+            <div class="menu-inner">
+                <header>
+                    <h1 class="game-title">VECTERRA<br>COMMAND</h1>
+                    <div class="subtitle">Tactical Flight Simulator</div>
+                </header>
+
+                <div class="menu-section">
+                    <div class="section-label">Mission Profile</div>
+                    <div class="mission-box">
+                        SURVIVE THE INFINITE GRID.
+                        DODGE OBSTACLES. ENGAGE HOSTILES.
+                    </div>
+                    <div class="warning-box">
+                        <span class="warning-icon">⚠</span>
+                        <span>CAUTION: HIGH-VOLTAGE SPIKE MINES DETECTED</span>
+                    </div>
+                </div>
+
+                <div class="menu-section">
+                    <div class="section-label">System Controls</div>
+                    
+                    <!-- Desktop Instructions -->
+                    <div class="controls-grid desktop-instructions">
+                        <div class="control-row">
+                            <span>STEER</span> <span class="control-key">MOUSE</span>
+                        </div>
+                        <div class="control-row">
+                            <span>FIRE</span> <span class="control-key">CLICK</span>
+                        </div>
+                        <div class="control-row">
+                            <span>BOOST</span> <span class="control-key">[ W ]</span>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Instructions -->
+                    <div class="controls-grid mobile-instructions">
+                        <div class="control-row">
+                            <span>PILOT</span> <span class="control-key">DRAG</span>
+                        </div>
+                        <div class="control-row">
+                            <span>FIRE</span> <span class="control-key">AUTO</span>
+                        </div>
+                        <div class="control-row">
+                            <span>BOOST</span> <span class="control-key">2 TAPS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="start-btn" class="start-button" aria-label="Initialize System">
+                    INITIALIZE SYSTEM
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pause Menu -->
+    <section id="pause-menu" class="hidden" aria-label="Pause Menu">
+        <h1>SYSTEM PAUSED</h1>
+        <p>CONNECTION LOST</p>
+        <button id="resume-btn">RESUME LINK</button>
+    </section>
+
+    <!-- In-Game Dashboard -->
+    <footer class="dashboard hidden" id="dashboard" role="contentinfo">
+        <div>
+            SHIELD
+            <div class="bar-container" aria-label="Shield Level"><div id="shield-bar" class="bar-fill"></div></div>
+        </div>
+        <div style="text-align: center;">
+            SCORE<br>
+            <span id="score-val">0</span>
+        </div>
+        <div style="text-align: right;">
+            THRUST
+            <div class="bar-container" aria-label="Thrust Level"><div id="speed-bar" class="bar-fill"></div></div>
+        </div>
+    </footer>
+    
+    <!-- Game Over Screen -->
+    <section id="game-over" class="hidden" aria-live="assertive">
+        <h1 style="color: #ff0000; text-shadow: 4px 4px 0px #550000; font-size: 20px;">CRASH DETECTED</h1>
+        <button id="retry-btn" style="border-color: #ff0000; color: #ff0000; box-shadow: 4px 4px 0px #550000;">REBOOT</button>
+    </section>
+</div>
+
+<!-- Three.js Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- Main Game Logic -->
+<script>
+    // --- Configuration ---
+    const CHUNK_SIZE = 400;
+    
+    // Balanced settings for wide field of view
+    const DRAW_DISTANCE = 32; 
+    const DRAW_WIDTH = 12; 
+    
+    const CAM_FAR = 13000;
+    const FOG_START = 5000; 
+    const FOG_END = 12000;  
+    const CEILING_HEIGHT = 450;
+    const MAX_TURN_ANGLE = 1.0; 
+
+    const SPEED_BASE_INIT = 2.0;
+    const SPEED_BOOST_INIT = 4.5;
+    const FIRE_RATE = 150; 
+    const POWERUP_DURATION = 20000; 
+    
+    // --- State ---
+    let scene, camera, renderer, playerLight, sunLight;
+    let difficultyMultiplier = 1.0;
+    let player = { 
+        pos: new THREE.Vector3(0, 50, 0), 
+        rot: new THREE.Euler(0,0,0), 
+        speed: SPEED_BASE_INIT, 
+        shield: 100,
+        powerupEnd: 0
+    };
+    let terrainChunks = new Map();
+    let projectiles = [];
+    let enemies = [];
+    let mines = [];
+    let particles = [];
+    let powerups = [];
+    let input = { x: 0, y: 0, boost: false, fire: false };
+    let lastFireTime = 0;
+    let isRunning = false;
+    let isPaused = false;
+    let score = 0;
+    let lastScoreMilestone = 0;
+    let timeElapsed = 0;
+
+    // Touch Handling State
+    let lastTouchX = null;
+    let lastTouchY = null;
+
+    // --- Audio ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const t = audioCtx.currentTime;
+
+        if (type === 'laser') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(880, t);
+            osc.frequency.exponentialRampToValueAtTime(110, t + 0.15);
+            gain.gain.setValueAtTime(0.05, t); 
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+            osc.start(t);
+            osc.stop(t + 0.15);
+        } else if (type === 'hit') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, t);
+            osc.frequency.exponentialRampToValueAtTime(30, t + 0.3);
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+            osc.start(t);
+            osc.stop(t + 0.3);
+        } else if (type === 'powerup') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, t);
+            osc.frequency.linearRampToValueAtTime(880, t + 0.2);
+            osc.frequency.linearRampToValueAtTime(1760, t + 0.5);
+            gain.gain.setValueAtTime(0.1, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.5);
+            osc.start(t);
+            osc.stop(t + 0.5);
+        } else if (type === 'alarm') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, t);
+            osc.frequency.linearRampToValueAtTime(100, t + 0.1);
+            gain.gain.setValueAtTime(0.1, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.1);
+            osc.start(t);
+            osc.stop(t + 0.1);
+        }
+    }
+
+    // --- Initialization ---
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000510);
+        scene.fog = new THREE.Fog(0x000510, FOG_START, FOG_END);
+
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, CAM_FAR);
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Perf optimization
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.15);
+        scene.add(ambient);
+        
+        sunLight = new THREE.DirectionalLight(0xff00aa, 1.2);
+        sunLight.position.set(0, 1000, -2000);
+        scene.add(sunLight);
+
+        playerLight = new THREE.PointLight(0x00ffff, 2, 600);
+        scene.add(playerLight);
+        
+        window.addEventListener('resize', onResize);
+        
+        // Input Listeners
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mousedown', (e) => { 
+            // Avoid firing when clicking buttons
+            if (e.target.tagName !== 'BUTTON' && !e.target.classList.contains('touch-btn')) {
+                input.fire = true; 
+            }
+        });
+        document.addEventListener('mouseup', () => { input.fire = false; });
+        document.addEventListener('keydown', e => { if(e.code === 'KeyW') input.boost = true; });
+        document.addEventListener('keyup', e => { if(e.code === 'KeyW') input.boost = false; });
+
+        // Touch Listeners
+        const canvasContainer = document.getElementById('canvas-container');
+        canvasContainer.addEventListener('touchstart', onTouchStart, {passive: false});
+        canvasContainer.addEventListener('touchmove', onTouchMove, {passive: false});
+        canvasContainer.addEventListener('touchend', onTouchEnd);
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === document.body) {
+                if (isRunning) {
+                    isPaused = false;
+                    document.getElementById('pause-menu').classList.add('hidden');
+                }
+            } else {
+                if (isRunning && !('ontouchstart' in window)) { // Don't pause on touch devices if lock fails
+                    isPaused = true;
+                    document.getElementById('pause-menu').classList.remove('hidden');
+                }
+            }
+        });
+
+        const requestLock = () => {
+            // Only request lock on non-touch devices
+            if (!('ontouchstart' in window) && (navigator.maxTouchPoints === 0)) {
+                const promise = document.body.requestPointerLock();
+                if (promise) {
+                    promise.catch(err => {
+                        console.warn("Pointer lock failed:", err);
+                    });
+                }
+            }
+        };
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('menu-container').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            requestLock();
+            startGame();
+        });
+
+        document.getElementById('resume-btn').addEventListener('click', () => {
+            if (isPaused) {
+                isPaused = false;
+                document.getElementById('pause-menu').classList.add('hidden');
+                requestLock();
+            }
+        });
+
+        document.getElementById('retry-btn').addEventListener('click', () => {
+            document.getElementById('game-over').classList.add('hidden');
+            startGame();
+            requestLock();
+        });
+
+        animate(0);
+    }
+
+    function startGame() {
+        isRunning = true;
+        isPaused = false;
+        player.pos.set(0, 100, 0);
+        player.shield = 100;
+        player.powerupEnd = 0;
+        score = 0;
+        lastScoreMilestone = 0;
+        difficultyMultiplier = 1.0;
+        timeElapsed = 0;
+        input.x = 0; 
+        input.y = 0;
+        input.fire = false;
+        enemies = [];
+        mines = [];
+        powerups = [];
+        projectiles = [];
+        particles = [];
+        terrainChunks.clear();
+        document.getElementById('game-body').classList.remove('powered-up');
+        document.getElementById('powerup-msg').classList.remove('active-powerup');
+        document.getElementById('threat-msg').style.display = 'none';
+        
+        // Clean scene
+        for(let i = scene.children.length - 1; i >= 0; i--) {
+            const child = scene.children[i];
+            if (child.userData.isTerrain || child.userData.isEnemy || child.userData.isProj || child.userData.isPowerup || child.userData.isParticle || child.userData.isMine) {
+                scene.remove(child);
+                if(child.geometry) child.geometry.dispose();
+                if(child.material) child.material.dispose();
+            }
+        }
+    }
+
+    // --- Touch Logic ---
+    function onTouchStart(e) {
+        if (!isRunning || isPaused) return;
+        if(e.target.id === 'canvas-container') e.preventDefault();
+
+        // Always fire if screen is touched
+        input.fire = true;
+
+        // Boost if more than one finger
+        if (e.touches.length > 1) {
+            input.boost = true;
+        }
+
+        // Track primary finger for steering (use first available)
+        const touch = e.touches[0];
+        lastTouchX = touch.clientX;
+        lastTouchY = touch.clientY;
+    }
+
+    function onTouchMove(e) {
+        if (!isRunning || isPaused) return;
+        if(e.target.id === 'canvas-container') e.preventDefault();
+        
+        if (lastTouchX !== null && lastTouchY !== null && e.touches.length > 0) {
+            const touch = e.touches[0];
+            const dx = touch.clientX - lastTouchX;
+            const dy = touch.clientY - lastTouchY;
+            
+            const sensitivity = 0.004; 
+            
+            input.x -= dx * sensitivity;
+            input.y -= dy * sensitivity;
+            
+            input.x = Math.max(-MAX_TURN_ANGLE, Math.min(MAX_TURN_ANGLE, input.x));
+            input.y = Math.max(-1.0, Math.min(1.0, input.y));
+            
+            lastTouchX = touch.clientX;
+            lastTouchY = touch.clientY;
+        }
+    }
+
+    function onTouchEnd(e) {
+        if(e.target.id === 'canvas-container') e.preventDefault();
+
+        if (e.touches.length === 0) {
+            // No fingers left
+            input.fire = false;
+            input.boost = false;
+            lastTouchX = null;
+            lastTouchY = null;
+        } else {
+            // Fingers remain
+            input.fire = true; // Keep firing
+            if (e.touches.length < 2) {
+                input.boost = false; // Cancel boost if less than 2 fingers
+            }
+            // Update reference to remaining finger
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+        }
+    }
+
+    // --- Terrain ---
+    function getMountainNoise(x, z) {
+        const largeShapes = Math.sin(x * 0.003) * Math.cos(z * 0.003) * 200;
+        const ridges = Math.abs(Math.sin(x * 0.01 + z * 0.005)) * 80;
+        return largeShapes + ridges;
+    }
+
+    function getTerrainHeight(x, z) {
+        const floorH = Math.sin(x * 0.002) * Math.cos(z * 0.002) * 20;
+        const width = 600 + Math.sin(z * 0.001) * 150;
+        const dist = Math.abs(x);
+        
+        if (dist > width) {
+            const d = dist - width;
+            const sideFactor = (x > 0) ? 1.0 : 0.8;
+            let wall = Math.pow(d * 0.06, 1.7) * 2.0;
+            const mountainMix = Math.min(1, d / 800);
+            wall += getMountainNoise(x, z) * mountainMix * 1.5;
+            return floorH + (wall * sideFactor);
+        }
+        return floorH;
+    }
+
+    function generateChunk(cx, cz) {
+        const geo = new THREE.BufferGeometry();
+        const size = CHUNK_SIZE;
+        const segs = 16; 
+        const vertices = [];
+        const colors = [];
+        const colorBase = new THREE.Color(0x001133);
+        const colorMid = new THREE.Color(0x8800ff); 
+        const colorPeak = new THREE.Color(0x00ffff); 
+
+        for (let i = 0; i <= segs; i++) {
+            for (let j = 0; j <= segs; j++) {
+                const x = (i / segs) * size + (cx * size);
+                const z = (j / segs) * size + (cz * size);
+                const y = getTerrainHeight(x, z);
+                vertices.push(x, y, z);
+                
+                let c = new THREE.Color();
+                if (y < 100) {
+                    const alpha = Math.max(0, (y + 50) / 150);
+                    c.copy(colorBase).lerp(colorMid, alpha * 0.5);
+                } else {
+                    const alpha = Math.min(1, Math.max(0, (y - 100) / 600));
+                    c.copy(colorMid).lerp(colorPeak, alpha);
+                }
+
+                colors.push(c.r, c.g, c.b);
+            }
+        }
+        
+        const indices = [];
+        for (let i = 0; i < segs; i++) {
+            for (let j = 0; j < segs; j++) {
+                const a = i * (segs + 1) + j;
+                const b = i * (segs + 1) + j + 1;
+                const c = (i + 1) * (segs + 1) + j;
+                const d = (i + 1) * (segs + 1) + j + 1;
+                indices.push(a, b, d);
+                indices.push(a, d, c);
+            }
+        }
+
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        geo.setIndex(indices);
+        geo.computeVertexNormals();
+
+        const mat = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            wireframe: true, 
+            emissive: 0x0044aa,
+            emissiveIntensity: 0.6,
+            roughness: 0.9,
+            metalness: 0.1
+        });
+
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.userData.isTerrain = true;
+        scene.add(mesh);
+        
+        // Spawning with Adaptive Difficulty
+        if (Math.abs(cx) <= 1) {
+            // Powerup
+            if (Math.random() < 0.01) {
+                spawnPowerup((cx * size), (cz * size));
+            }
+            // Mines (New)
+            else if (Math.random() < 0.1) {
+                spawnMine((cx * size) + Math.random()*200-100, (cz * size) + Math.random()*200-100);
+            }
+            // Enemies
+            else if (Math.random() > (0.4 / difficultyMultiplier)) {
+                const offsetX = (Math.random() * size) - (size / 2);
+                const offsetZ = (Math.random() * size) - (size / 2);
+                const ex = (cx * size) + offsetX;
+                const ez = (cz * size) + offsetZ;
+                
+                const terrainH = getTerrainHeight(ex, ez);
+                if (terrainH < 150) { 
+                    spawnEnemy(ex, ez, terrainH);
+                }
+            }
+        }
+        
+        return mesh;
+    }
+
+    function updateChunks() {
+        const px = player.pos.x;
+        const pz = player.pos.z;
+        const cx = Math.floor(px / CHUNK_SIZE);
+        const cz = Math.floor(pz / CHUNK_SIZE);
+        const activeKeys = new Set();
+
+        for (let x = -DRAW_WIDTH; x <= DRAW_WIDTH; x++) {
+            for (let z = -DRAW_DISTANCE; z <= 2; z++) { 
+                const key = `${cx + x},${cz + z}`;
+                activeKeys.add(key);
+                if (!terrainChunks.has(key)) {
+                    terrainChunks.set(key, generateChunk(cx + x, cz + z));
+                }
+            }
+        }
+        for (const [key, mesh] of terrainChunks) {
+            if (!activeKeys.has(key)) {
+                scene.remove(mesh);
+                if(mesh.geometry) mesh.geometry.dispose();
+                if(mesh.material) mesh.material.dispose();
+                terrainChunks.delete(key);
+            }
+        }
+    }
+
+    // --- Particles & Effects ---
+    function spawnExplosion(pos, color) {
+        // Updated "De-rezzing" Effect: Larger, more numerous blocks
+        const particleCount = 25; 
+        const geo = new THREE.BoxGeometry(6, 6, 6); // Larger voxel debris
+        const mat = new THREE.MeshBasicMaterial({ color: color, wireframe: true });
+
+        for (let i = 0; i < particleCount; i++) {
+            const mesh = new THREE.Mesh(geo, mat.clone());
+            mesh.position.copy(pos);
+            mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+            
+            // Explosive outward velocity
+            const vel = new THREE.Vector3(
+                (Math.random() - 0.5) * 60,
+                (Math.random() - 0.5) * 60,
+                (Math.random() - 0.5) * 60
+            );
+            
+            mesh.userData = { isParticle: true, velocity: vel, life: 1.0 };
+            scene.add(mesh);
+            particles.push(mesh);
+        }
+    }
+
+    // --- Objects ---
+    function spawnMine(x, z) {
+        // Static Hazard: Spiky Orange Mine
+        const geo = new THREE.IcosahedronGeometry(8, 0);
+        // Inner core for visibility
+        const coreGeo = new THREE.IcosahedronGeometry(4, 0);
+        
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff4400, wireframe: true });
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+        
+        const mesh = new THREE.Mesh(geo, mat);
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        mesh.add(core); // Combine them
+
+        // Mines float at various heights
+        const alt = 50 + Math.random() * 200;
+        mesh.position.set(x, alt, z);
+        mesh.userData = { isMine: true };
+        
+        scene.add(mesh);
+        mines.push(mesh);
+    }
+
+    function spawnPowerup(x, z) {
+        const geo = new THREE.TetrahedronGeometry(15);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true });
+        const mesh = new THREE.Mesh(geo, mat);
+        
+        const alt = 100 + Math.random() * 100;
+        mesh.position.set(x, alt, z);
+        mesh.userData = { isPowerup: true };
+        
+        scene.add(mesh);
+        powerups.push(mesh);
+    }
+
+    function spawnEnemy(x, z, groundY) {
+        const typeRoll = Math.random();
+        let color, geo, points;
+        
+        if (typeRoll < 0.4) {
+            color = 0xff0000;
+            geo = new THREE.OctahedronGeometry(12);
+            points = 100;
+        } else if (typeRoll < 0.7) {
+            color = 0xffff00;
+            geo = new THREE.BoxGeometry(18, 18, 18);
+            points = 250;
+        } else if (typeRoll < 0.9) {
+            color = 0xffffff; // Changed from Green (0x00ff00) to White (0xffffff)
+            geo = new THREE.IcosahedronGeometry(14, 0);
+            points = 500;
+        } else {
+            color = 0x0088ff;
+            geo = new THREE.TetrahedronGeometry(16);
+            points = 1000;
+        }
+
+        const mat = new THREE.MeshBasicMaterial({ color: color, wireframe: true });
+        const mesh = new THREE.Mesh(geo, mat);
+        
+        const alt = 80 + Math.random() * 320;
+        mesh.position.set(x, groundY + alt, z);
+        mesh.userData = { 
+            isEnemy: true, 
+            points: points, 
+            color: color
+        };
+        
+        scene.add(mesh);
+        enemies.push(mesh);
+    }
+
+    function fireLaser() {
+        playSound('laser');
+        
+        const hasPowerup = Date.now() < player.powerupEnd;
+        const offsets = [new THREE.Vector3(2.5, -2, -5), new THREE.Vector3(-2.5, -2, -5)];
+        
+        if (hasPowerup) {
+            offsets.push(new THREE.Vector3(6, -2, -5));
+            offsets.push(new THREE.Vector3(-6, -2, -5));
+            offsets.push(new THREE.Vector3(0, 4, -5));
+        }
+
+        offsets.forEach(off => {
+            const geo = new THREE.BoxGeometry(0.8, 0.8, 15);
+            const mat = new THREE.MeshBasicMaterial({ color: hasPowerup ? 0xff00ff : 0x00ff00 });
+            const mesh = new THREE.Mesh(geo, mat);
+            
+            const offset = off.clone().applyEuler(camera.rotation);
+            mesh.position.copy(camera.position).add(offset);
+            
+            const velocity = new THREE.Vector3(0, 0, -15).applyEuler(camera.rotation);
+            velocity.add(new THREE.Vector3(0,0,-player.speed * 2).applyEuler(new THREE.Euler(0, camera.rotation.y, 0))); 
+
+            mesh.userData = { 
+                isProj: true, 
+                velocity: velocity, 
+                life: 100,
+                homing: hasPowerup 
+            };
+            scene.add(mesh);
+            projectiles.push(mesh);
+        });
+    }
+
+    // --- Physics & Loop ---
+    function onMouseMove(e) {
+        if (!isRunning || isPaused) return;
+        const sensitivity = 0.002;
+        input.x -= e.movementX * sensitivity;
+        input.y -= e.movementY * sensitivity;
+        
+        input.x = Math.max(-MAX_TURN_ANGLE, Math.min(MAX_TURN_ANGLE, input.x));
+        input.y = Math.max(-1.0, Math.min(1.0, input.y)); 
+    }
+
+    function updatePhysics() {
+        timeElapsed += 0.01;
+        
+        // Adaptive Difficulty
+        // Every 2000 points, increase difficulty
+        if (score > lastScoreMilestone + 2000) {
+            difficultyMultiplier += 0.1;
+            lastScoreMilestone = score;
+            const msg = document.getElementById('threat-msg');
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+        }
+
+        const powerupActive = Date.now() < player.powerupEnd;
+        if (powerupActive) {
+            document.getElementById('game-body').classList.add('powered-up');
+            document.getElementById('powerup-msg').classList.add('active-powerup');
+        } else {
+            document.getElementById('game-body').classList.remove('powered-up');
+            document.getElementById('powerup-msg').classList.remove('active-powerup');
+        }
+
+        if (input.fire && Date.now() - lastFireTime > FIRE_RATE) {
+            fireLaser();
+            lastFireTime = Date.now();
+        }
+
+        const hue = (timeElapsed * 0.05) % 1;
+        sunLight.color.setHSL(hue, 1, 0.5);
+        playerLight.position.copy(camera.position);
+
+        const currentSpeedBase = SPEED_BASE_INIT * difficultyMultiplier;
+        const currentSpeedBoost = SPEED_BOOST_INIT * difficultyMultiplier;
+        const speed = input.boost ? currentSpeedBoost : currentSpeedBase;
+        player.speed = speed;
+        
+        camera.rotation.set(input.y, input.x, 0);
+        camera.rotation.z = -input.x * 0.5 + (camera.rotation.y * 0.2); 
+
+        const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+        player.pos.add(dir.multiplyScalar(speed));
+        
+        const groundHeight = getTerrainHeight(player.pos.x, player.pos.z);
+        if (player.pos.y < groundHeight + 5) {
+            player.shield -= 5;
+            player.pos.y = groundHeight + 8;
+            playSound('alarm');
+        }
+        
+        if (player.pos.y > CEILING_HEIGHT) {
+            player.pos.y = CEILING_HEIGHT;
+        }
+        
+        camera.position.copy(player.pos);
+
+        // --- Particles Update ---
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.position.add(p.userData.velocity);
+            p.rotation.x += 0.1;
+            p.userData.life -= 0.03; // Faster fade
+            p.material.opacity = p.userData.life;
+            p.userData.velocity.multiplyScalar(0.95); // Drag
+
+            if (p.userData.life <= 0) {
+                scene.remove(p);
+                particles.splice(i, 1);
+            }
+        }
+
+        // --- Enemy Logic ---
+        enemies.forEach((e, idx) => {
+            e.rotation.x += 0.05;
+            e.rotation.y += 0.05;
+        });
+        
+        // --- Mine Collision ---
+        for (let i = mines.length - 1; i >= 0; i--) {
+            const m = mines[i];
+            m.rotation.y += 0.02;
+            m.rotation.x += 0.01;
+            
+            // Hit Player?
+            if (m.position.distanceTo(player.pos) < 15) {
+                player.shield -= 25; // Massive damage
+                playSound('alarm');
+                
+                spawnExplosion(m.position, 0xff4400); // Mine explodes
+                scene.remove(m);
+                mines.splice(i, 1);
+                continue;
+            }
+            // Cleanup
+            if (m.position.z > player.pos.z + 100) {
+                scene.remove(m);
+                mines.splice(i, 1);
+            }
+        }
+
+        // --- Player Projectiles ---
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            const p = projectiles[i];
+            
+            if (p.userData.homing) {
+                let closestDist = 2000;
+                let target = null;
+                for (let e of enemies) {
+                    const d = p.position.distanceTo(e.position);
+                    if (d < closestDist && e.position.z < p.position.z) { 
+                        closestDist = d;
+                        target = e;
+                    }
+                }
+                if (target) {
+                    const direction = new THREE.Vector3().subVectors(target.position, p.position).normalize();
+                    p.userData.velocity.lerp(direction.multiplyScalar(15), 0.1); 
+                }
+            }
+
+            p.position.add(p.userData.velocity);
+            p.userData.life--;
+            
+            let hit = false;
+            
+            if (p.userData.life <= 0) {
+                scene.remove(p);
+                projectiles.splice(i, 1);
+            } else {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const e = enemies[j];
+                    if (p.position.distanceTo(e.position) < 30) {
+                        score += e.userData.points;
+                        spawnExplosion(e.position, e.userData.color); // BOOM
+                        scene.remove(e);
+                        enemies.splice(j, 1);
+                        scene.remove(p);
+                        projectiles.splice(i, 1);
+                        playSound('hit');
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Powerup Collision
+        for (let i = powerups.length - 1; i >= 0; i--) {
+            const p = powerups[i];
+            p.rotation.x += 0.05;
+            p.rotation.y += 0.05;
+            if (p.position.distanceTo(player.pos) < 20) {
+                player.powerupEnd = Date.now() + POWERUP_DURATION;
+                playSound('powerup');
+                scene.remove(p);
+                powerups.splice(i, 1);
+            } else if (p.position.z > player.pos.z + 100) {
+                scene.remove(p);
+                powerups.splice(i, 1);
+            }
+        }
+
+        const shieldEl = document.getElementById('shield-bar');
+        shieldEl.style.width = player.shield + '%';
+        if(player.shield < 30) shieldEl.parentElement.parentElement.classList.add('danger');
+        else shieldEl.parentElement.parentElement.classList.remove('danger');
+        
+        document.getElementById('speed-bar').style.width = (player.speed / SPEED_BOOST_INIT * 100) + '%';
+        document.getElementById('score-val').innerText = score;
+
+        if (player.shield <= 0) gameOver();
+    }
+
+    function gameOver() {
+        isRunning = false;
+        if(document.pointerLockElement) document.exitPointerLock();
+        document.getElementById('game-over').classList.remove('hidden');
+    }
+
+    function animate(time) {
+        requestAnimationFrame(animate);
+        if (isRunning && !isPaused) {
+            updatePhysics();
+            updateChunks();
+        }
+        renderer.render(scene, camera);
+    }
+
+    function onResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    init();
+</script>
+</body>
+</html>
